@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阿里国际站 · 一键拓品谈单引擎</title>
+<style>
+:root {
+  --blue:#0055C8; --blue-light:#EEF4FF; --orange:#FF6B2B; --orange-light:#FFF3EE;
+  --green:#00A86B; --green-light:#EEFAF5; --purple:#7C3AED; --purple-light:#F5F0FF;
+  --gray-50:#F8FAFC; --gray-100:#F1F5F9; --gray-200:#E2E8F0; --gray-400:#94A3B8;
+  --gray-600:#475569; --gray-800:#1E293B; --white:#fff;
+  --radius:14px; --shadow:0 4px 20px rgba(0,0,0,.08);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'PingFang SC','Segoe UI',sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; }
+
+/* ── HEADER ── */
+.header { background:linear-gradient(135deg,#003D9B 0%,#0055C8 60%,#0080FF 100%); color:#fff; padding:36px 40px 32px; }
+.header-inner { max-width:1100px; margin:0 auto; }
+.header h1 { font-size:28px; font-weight:700; letter-spacing:-.5px; margin-bottom:6px; }
+.header p  { font-size:15px; opacity:.8; }
+.badge { display:inline-block; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3); border-radius:20px; padding:3px 12px; font-size:12px; margin-top:10px; }
+
+/* ── SEARCH ── */
+.search-wrap { max-width:1100px; margin:-24px auto 0; padding:0 24px; position:relative; z-index:10; }
+.search-box { background:#fff; border-radius:var(--radius); box-shadow:0 8px 40px rgba(0,0,80,.12); display:flex; align-items:center; padding:10px 10px 10px 20px; gap:12px; }
+.search-box input {
+  flex:1; border:none; outline:none; font-size:16px; color:var(--gray-800);
+  background:transparent; padding:10px 0;
+}
+.search-box input::placeholder { color:var(--gray-400); }
+.search-box button {
+  background:linear-gradient(135deg,var(--blue),#0080FF);
+  color:#fff; border:none; border-radius:10px; padding:12px 28px;
+  font-size:15px; font-weight:600; cursor:pointer; white-space:nowrap;
+  transition:opacity .2s;
+}
+.search-box button:hover { opacity:.88; }
+.search-icon { color:var(--gray-400); font-size:18px; flex-shrink:0; }
+
+/* ── MAIN ── */
+.main { max-width:1100px; margin:32px auto 60px; padding:0 24px; }
+
+/* ── PLACEHOLDER & LOADING ── */
+.placeholder, .loading-wrap {
+  text-align:center; padding:80px 20px; color:var(--gray-400);
+}
+.placeholder svg, .loading-wrap svg { width:64px; height:64px; margin:0 auto 20px; display:block; }
+.placeholder p { font-size:17px; }
+.spinner { width:48px; height:48px; border:4px solid var(--gray-200); border-top-color:var(--blue); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-steps { list-style:none; text-align:left; display:inline-block; margin-top:16px; }
+.loading-steps li { padding:6px 0 6px 28px; position:relative; color:var(--gray-600); font-size:14px; }
+.loading-steps li::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:16px; height:16px; border-radius:50%; background:var(--gray-200); }
+.loading-steps li.done::before { background:var(--green); }
+.loading-steps li.active::before { background:var(--blue); animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── RESULT HEADER ── */
+.result-header { background:#fff; border-radius:var(--radius); padding:20px 24px; margin-bottom:24px; box-shadow:var(--shadow); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.result-title { font-size:18px; font-weight:700; }
+.result-title span { color:var(--blue); }
+.score-badge { background:linear-gradient(135deg,var(--green),#00C97F); color:#fff; border-radius:20px; padding:6px 16px; font-size:14px; font-weight:700; }
+.result-meta { display:flex; gap:16px; flex-wrap:wrap; }
+.result-meta-item { font-size:13px; color:var(--gray-600); }
+.result-meta-item strong { color:var(--gray-800); }
+
+/* ── GRID ── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+@media(max-width:700px){ .grid-2{ grid-template-columns:1fr; } }
+
+/* ── CARD ── */
+.card { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; transition:transform .25s,box-shadow .25s; }
+.card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(0,0,0,.12); }
+.card-head { padding:18px 20px 14px; display:flex; align-items:flex-start; gap:14px; border-bottom:1px solid var(--gray-100); }
+.card-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:20px; }
+.card-icon.blue   { background:var(--blue-light); }
+.card-icon.orange { background:var(--orange-light); }
+.card-icon.purple { background:var(--purple-light); }
+.card-icon.green  { background:var(--green-light); }
+.card-label { font-size:12px; color:var(--gray-400); font-weight:600; letter-spacing:.5px; text-transform:uppercase; margin-bottom:4px; }
+.card-title { font-size:16px; font-weight:700; }
+.card-tag { margin-left:auto; font-size:12px; font-weight:700; padding:3px 10px; border-radius:12px; white-space:nowrap; }
+.card-tag.green  { color:var(--green);  background:var(--green-light); }
+.card-tag.orange { color:var(--orange); background:var(--orange-light); }
+.card-tag.blue   { color:var(--blue);   background:var(--blue-light); }
+.card-tag.purple { color:var(--purple); background:var(--purple-light); }
+.card-body { padding:16px 20px 20px; }
+
+/* ── MARKET CARD ── */
+.market-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.stat-box { background:var(--gray-50); border-radius:10px; padding:12px; }
+.stat-box .val { font-size:20px; font-weight:800; color:var(--blue); margin-bottom:2px; }
+.stat-box .lbl { font-size:11px; color:var(--gray-400); }
+.blue-ocean { background:var(--blue-light); border-radius:10px; padding:12px 14px; }
+.blue-ocean .title { font-size:12px; font-weight:700; color:var(--blue); margin-bottom:8px; }
+.blue-ocean .tags { display:flex; flex-wrap:wrap; gap:6px; }
+.blue-ocean .tags span { background:#fff; border:1px solid #C7D9FF; color:var(--blue); font-size:12px; border-radius:8px; padding:3px 10px; }
+
+/* ── 4D SCORE ── */
+.score-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
+.score-item { text-align:center; }
+.score-item .sval { font-size:18px; font-weight:800; }
+.score-item .slbl { font-size:11px; color:var(--gray-400); margin-top:2px; }
+.score-bar { height:4px; border-radius:4px; background:var(--gray-200); margin-top:6px; overflow:hidden; }
+.score-bar-fill { height:100%; border-radius:4px; background:var(--blue); }
+
+/* ── SUPPLY CARD ── */
+.factory-list { display:flex; flex-direction:column; gap:10px; }
+.factory-item { border:1px solid var(--gray-200); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
+.factory-badge { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; color:#fff; flex-shrink:0; }
+.factory-badge.A { background:#0055C8; }
+.factory-badge.B { background:#FF6B2B; }
+.factory-badge.C { background:#00A86B; }
+.factory-badge.D { background:#7C3AED; }
+.factory-name { font-size:14px; font-weight:700; margin-bottom:3px; }
+.factory-tags { display:flex; gap:6px; flex-wrap:wrap; }
+.factory-tags span { font-size:11px; background:var(--gray-100); color:var(--gray-600); border-radius:6px; padding:2px 7px; }
+.factory-price { margin-left:auto; text-align:right; flex-shrink:0; }
+.factory-price .p { font-size:14px; font-weight:700; color:var(--orange); }
+.factory-price .m { font-size:11px; color:var(--gray-400); }
+
+/* ── PRODUCT IMAGES ── */
+.product-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.product-img-wrap { position:relative; border-radius:10px; overflow:hidden; aspect-ratio:3/4; background:var(--gray-100); }
+.product-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+.product-img-label { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,rgba(0,0,0,.65)); color:#fff; font-size:12px; font-weight:600; padding:16px 10px 8px; }
+.img-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--gray-400); font-size:12px; gap:6px; }
+.img-placeholder svg { width:28px; height:28px; }
+
+/* ── LISTING CARD ── */
+.title-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.title-item { border:1px solid var(--gray-200); border-radius:8px; padding:10px 14px; display:flex; align-items:flex-start; gap:10px; }
+.title-num { font-size:11px; font-weight:800; color:var(--blue); background:var(--blue-light); border-radius:6px; padding:2px 7px; flex-shrink:0; margin-top:2px; }
+.title-text { font-size:13px; color:var(--gray-800); line-height:1.5; }
+.kw-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.kw-tags span { font-size:12px; background:var(--purple-light); color:var(--purple); border-radius:8px; padding:3px 10px; }
+
+/* ── FULL-WIDTH CARD ── */
+.card-full { margin-bottom:20px; }
+.sp-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+@media(max-width:700px){ .sp-grid{ grid-template-columns:1fr 1fr; } }
+.sp-item { background:var(--gray-50); border-radius:10px; padding:14px 12px; }
+.sp-num { font-size:10px; font-weight:800; color:var(--blue); letter-spacing:.5px; margin-bottom:6px; }
+.sp-title { font-size:13px; font-weight:700; margin-bottom:6px; }
+.sp-text { font-size:12px; color:var(--gray-600); line-height:1.6; }
+
+/* ── SOP CARD ── */
+.sop-steps { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+@media(max-width:700px){ .sop-steps{ grid-template-columns:1fr 1fr; } }
+.sop-step { border-radius:10px; padding:16px 14px; }
+.sop-step.s1 { background:var(--blue-light); }
+.sop-step.s2 { background:var(--orange-light); }
+.sop-step.s3 { background:var(--purple-light); }
+.sop-step.s4 { background:var(--green-light); }
+.sop-step-num { font-size:11px; font-weight:800; letter-spacing:.5px; margin-bottom:8px; }
+.sop-step.s1 .sop-step-num { color:var(--blue); }
+.sop-step.s2 .sop-step-num { color:var(--orange); }
+.sop-step.s3 .sop-step-num { color:var(--purple); }
+.sop-step.s4 .sop-step-num { color:var(--green); }
+.sop-step h4 { font-size:14px; font-weight:700; margin-bottom:6px; }
+.sop-step p  { font-size:12px; color:var(--gray-600); line-height:1.6; }
+
+.hidden { display:none!important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1>🚀 阿里国际站 · 一键拓品谈单引擎</h1>
+    <p>CM 专用 · 输入任意产品，实时生成【市场分析 + 爆品设计 + 供应链 + 发品包】全套方案</p>
+    <span class="badge">✦ Powered by Accio AI · 动态生成版</span>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/></svg>
+    <input id="productInput" type="text" placeholder="输入任意品类，如：女装连衣裙、户外帐篷、无线耳机、宠物玩具…" onkeydown="if(event.key==='Enter')doGenerate()">
+    <button onclick="doGenerate()">✦ 一键生成全套方案</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PLACEHOLDER -->
+  <div id="placeholder" class="placeholder">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 64 64" stroke="#CBD5E1" stroke-width="1.5">
+      <rect x="8" y="8" width="48" height="48" rx="8"/><circle cx="32" cy="28" r="8"/><path d="M16 52c0-8.837 7.163-16 16-16s16 7.163 16 16"/>
+    </svg>
+    <p>输入产品名称，立即生成专属谈单方案</p>
+  </div>
+
+  <!-- LOADING -->
+  <div id="loadingWrap" class="loading-wrap hidden">
+    <div class="spinner"></div>
+    <p style="font-size:16px;font-weight:700;color:#1E293B;margin-bottom:12px" id="loadingTitle">AI 正在为您生成专属方案…</p>
+    <ul class="loading-steps" id="loadingSteps">
+      <li id="ls1">📊 调取全球市场规模与趋势数据</li>
+      <li id="ls2">🏭 匹配 1688 跨境货源工厂</li>
+      <li id="ls3">🎨 生成爆品视觉设计方案</li>
+      <li id="ls4">📝 输出国际站 SEO 发品包</li>
+    </ul>
+  </div>
+
+  <!-- RESULT -->
+  <div id="resultArea" class="hidden">
+
+    <!-- Result Header -->
+    <div class="result-header">
+      <div>
+        <div class="result-title">「<span id="rProductName"></span>」一键拓品分析报告</div>
+        <div class="result-meta" style="margin-top:8px">
+          <span class="result-meta-item">数据来源: <strong>ICBU + Amazon + 1688</strong></span>
+          <span class="result-meta-item">生成时间: <strong id="rTime"></strong></span>
+        </div>
+      </div>
+      <div class="score-badge" id="rScoreBadge">综合机会评分 ★ 4.2</div>
+    </div>
+
+    <!-- ROW 1: Market + Supply -->
+    <div class="grid-2">
+
+      <!-- 1. Market Analysis -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon blue">📊</div>
+          <div>
+            <div class="card-label">模块一</div>
+            <div class="card-title">全球市场分析</div>
+          </div>
+          <span class="card-tag green" id="mScore">机会评分 4.2</span>
+        </div>
+        <div class="card-body">
+          <div class="market-stats">
+            <div class="stat-box"><div class="val" id="mSize">$205B</div><div class="lbl">全球市场规模 (2024)</div></div>
+            <div class="stat-box"><div class="val" id="mCagr">+6.2%</div><div class="lbl">年复合增长率 CAGR</div></div>
+            <div class="stat-box"><div class="val" id="mPrice">$3–$15</div><div class="lbl">ICBU 批发价区间</div></div>
+            <div class="stat-box"><div class="val" id="mRetail">$25–$65</div><div class="lbl">Amazon 零售价区间</div></div>
+          </div>
+          <div class="blue-ocean">
+            <div class="title">🔵 蓝海关键词 / 卖点缺口</div>
+            <div class="tags" id="mBlueOcean"></div>
+          </div>
+          <div class="score-row">
+            <div class="score-item"><div class="sval" id="d1v" style="color:#0055C8">5.0</div><div class="slbl">D1 需求强度</div><div class="score-bar"><div class="score-bar-fill" id="d1b" style="width:100%"></div></div></div>
+            <div class="score-item"><div class="sval" id="d2v" style="color:#FF6B2B">3.5</div><div class="slbl">D2 供给空白</div><div class="score-bar"><div class="score-bar-fill" id="d2b" style="width:70%;background:#FF6B2B"></div></div></div>
+            <div class="score-item"><div class="sval" id="d3v" style="color:#00A86B">4.5</div><div class="slbl">D3 利润空间</div><div class="score-bar"><div class="score-bar-fill" id="d3b" style="width:90%;background:#00A86B"></div></div></div>
+            <div class="score-item"><div class="sval" id="d4v" style="color:#7C3AED">3.5</div><div class="slbl">D4 入场友好</div><div class="score-bar"><div class="score-bar-fill" id="d4b" style="width:70%;background:#7C3AED"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Supply Chain -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon orange">🏭</div>
+          <div>
+            <div class="card-label">模块二</div>
+            <div class="card-title">1688 跨境供应链地图</div>
+          </div>
+          <span class="card-tag orange" id="sFactoryCount">匹配 4 家工厂</span>
+        </div>
+        <div class="card-body">
+          <div class="factory-list" id="factoryList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2: Products + Listing -->
+    <div class="grid-2">
+
+      <!-- 3. AI Products -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon purple">🎨</div>
+          <div>
+            <div class="card-label">模块三</div>
+            <div class="card-title">爆品 AI 设计提案</div>
+          </div>
+          <span class="card-tag purple">4 款视觉稿</span>
+        </div>
+        <div class="card-body">
+          <div class="product-grid" id="productGrid"></div>
+          <p style="font-size:12px;color:#94A3B8;margin-top:10px;text-align:center">以上为 AI 参考设计稿，建议以此为方向开发样衣</p>
+        </div>
+      </div>
+
+      <!-- 4. Listing Pack -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-icon green">📝</div>
+          <div>
+            <div class="card-label">模块四</div>
+            <div class="card-title">国际站 SEO 发品包</div>
+          </div>
+          <span class="card-tag green">5 条标题</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:12px;color:#94A3B8;margin-bottom:10px;font-weight:600">▌ SEO 优化标题（直接可用）</div>
+          <div class="title-list" id="titleList"></div>
+          <div style="font-size:12px;color:#94A3B8;margin-bottom:8px;font-weight:600">▌ 核心关键词</div>
+          <div class="kw-tags" id="kwTags"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3: 5 Selling Points -->
+    <div class="card card-full">
+      <div class="card-head">
+        <div class="card-icon blue">✍️</div>
+        <div>
+          <div class="card-label">模块四 · 结构化卖点</div>
+          <div class="card-title">国际站详情页 5 段式黄金卖点</div>
+        </div>
+        <span class="card-tag blue">AI 友好型 A 档</span>
+      </div>
+      <div class="card-body">
+        <div class="sp-grid" id="spGrid"></div>
+      </div>
+    </div>
+
+    <!-- ROW 4: SOP -->
+    <div class="card card-full">
+      <div class="card-head">
+        <div class="card-icon green">🎯</div>
+        <div>
+          <div class="card-label">CM 谈单 SOP</div>
+          <div class="card-title" id="sopTitle">女装连衣裙 · 四阶段谈单话术</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="sop-steps" id="sopSteps"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── PRODUCT DATA ENGINE ────────────────────────────────────────────────────────
+// 每个品类定义完整的数据集，输入对应的关键词后动态渲染
+
+const DB = {
+
+  "女装连衣裙": {
+    score:4.1, d1:5.0, d2:3.5, d3:4.5, d4:3.5,
+    mSize:"$205B", mCagr:"+6.2%", mPrice:"¥25–¥65", mRetail:"$25–$65",
+    blueOcean:["带口袋设计","法式复古","大码 Plus Size","度假风 Boho","可定制印花"],
+    factories:[
+      {badge:"A", name:"普宁池尾洛斯服装厂", tags:["验厂认证","方领口袋裙"], price:"¥25–¥45", moq:"50件"},
+      {badge:"B", name:"广州天芙服饰有限公司", tags:["柔性快反","跨境智造"], price:"¥28–¥55", moq:"30件"},
+      {badge:"C", name:"佛山丰创服饰有限公司", tags:["欧美抽绳款","3年店铺"], price:"¥30–¥60", moq:"50件"},
+      {badge:"D", name:"云南伊玛民族服饰", tags:["好评率99.5%","波西米亚"], price:"¥35–¥65", moq:"20件"}
+    ],
+    products:[
+      {img:"https://sc02.alicdn.com/kf/A8abf8493dbde46f6a7adecde9d134dafB.png", label:"法式复古碎花款"},
+      {img:"https://sc02.alicdn.com/kf/A4b4a2cd2f11b4e82948ee091772780747.png", label:"都市抽绳褶皱款"},
+      {img:"https://sc02.alicdn.com/kf/Aa1a04019ce6a46139c90190884c790ceB.png", label:"波西米亚度假款"},
+      {img:"https://sc02.alicdn.com/kf/Aa2c1a10c6def4397bfa6937127b9c6e26.png", label:"奢华压褶礼服款"}
+    ],
+    titles:[
+      "French Vintage Floral Print Summer Dress Square Neck Puff Sleeve Linen A-Line Midi Dress with Pockets",
+      "Wholesale Bohemian Maxi Dress Women Sexy V-Neck Tiered Skirt Rayon Beach Vacation Boho Summer Dress",
+      "2025 Trendy Ruched Bodycon Maxi Dress Side Drawstring Sleeveless Square Neck Ribbed Knit Party Dress",
+      "Luxury Pleated Satin Midi Dress Women Elegant Halter Neck Accordion Pleats Evening Party Cocktail Dress",
+      "Customized Ladies Plus Size Casual Dress with Hidden Pockets Breathable Linen Women's Summer Dress OEM"
+    ],
+    keywords:["Women Dress","Boho Maxi Dress","Ruched Bodycon","Pleated Satin","French Vintage"],
+    sellingPoints:[
+      {num:"SP·01", title:"Core Value", text:"French Vintage / Boho / Bodycon 多风格连衣裙，适合夏季度假与日常通勤场景。"},
+      {num:"SP·02", title:"Key Function", text:"带口袋隐藏设计，弹力可调节抽绳技术，全天穿着舒适，提升买家复购率。"},
+      {num:"SP·03", title:"Material & Spec", text:"100% Rayon / Linen-Cotton / Ribbed Knit，尺码 S–3XL，含国际尺码对比表。"},
+      {num:"SP·04", title:"Target Scene", text:"适配海滩度假、宴会、日常通勤，搭配凉鞋与草帽，轻松出片，社媒高传播。"},
+      {num:"SP·05", title:"B2B Service", text:"支持 OEM/ODM 定制印花与配色，低 MOQ 30 件起，7–15 天出货，含合格证。"}
+    ],
+    sop:[
+      {cls:"s1", step:"STEP 01", title:"市场数据破冰", text:"展示 $205B 市场+6.2% 增速，点出批发/零售 4 倍利润差，建立客户认知。"},
+      {cls:"s2", step:"STEP 02", title:"供应链消除顾虑", text:"展示普宁/广州 4 家验厂，柔性快反 10 天出货，解决客户\"有单没货\"焦虑。"},
+      {cls:"s3", step:"STEP 03", title:"AI 视觉震撼提案", text:"展示 4 款专属设计图，带口袋/法式复古/抽绳都是蓝海款，预估转化率+30%。"},
+      {cls:"s4", step:"STEP 04", title:"发品包闭环成交", text:"5 条 SEO 标题+黄金卖点已就绪，今天开通/升级即可 1 小时完成首批上架。"}
+    ]
+  },
+
+  "无线耳机": {
+    score:4.3, d1:5.0, d2:4.0, d3:4.5, d4:3.5,
+    mSize:"$56B", mCagr:"+8.9%", mPrice:"¥35–¥180", mRetail:"$19–$89",
+    blueOcean:["ANC 主动降噪","骨传导","游戏低延迟","运动防汗IPX5","超长续航60h"],
+    factories:[
+      {badge:"A", name:"深圳某声学电子科技", tags:["OEM资质","ANC研发"], price:"¥45–¥120", moq:"200个"},
+      {badge:"B", name:"东莞音乐耳机工厂", tags:["骨传导专厂","独立研发"], price:"¥60–¥180", moq:"100个"},
+      {badge:"C", name:"广州跨境数码配件厂", tags:["快反能力","7天出样"], price:"¥35–¥80",  moq:"500个"},
+      {badge:"D", name:"深圳柔性消费电子厂", tags:["CE/FCC认证","多平台"],  price:"¥50–¥160", moq:"200个"}
+    ],
+    products:[
+      {img:null, label:"ANC 主动降噪款"},
+      {img:null, label:"骨传导运动款"},
+      {img:null, label:"游戏低延迟款"},
+      {img:null, label:"超长续航豆式款"}
+    ],
+    titles:[
+      "TWS Wireless Earbuds Active Noise Cancelling Bluetooth 5.3 Headphones 60H Playtime IPX5 Waterproof",
+      "Bone Conduction Headphones Open-Ear Sport Wireless Earphones Sweat-proof Running Cycling Earbuds OEM",
+      "Low Latency Gaming Earbuds 2.4GHz Wireless Headset RGB Light Noise Cancelling Mic for PC PS5 Xbox",
+      "Wholesale True Wireless Earbuds Bluetooth 5.3 Deep Bass HiFi Sound Touch Control Custom Logo ODM",
+      "Factory Price ANC Earbuds Active Noise Cancellation Wireless Headphones 40H Battery Custom Packaging"
+    ],
+    keywords:["TWS Earbuds","ANC Headphones","Bone Conduction","Gaming Headset","Wireless Earphones OEM"],
+    sellingPoints:[
+      {num:"SP·01", title:"Core Value", text:"TWS 主动降噪无线耳机，适合通勤、运动及游戏场景，覆盖主流 B2B 采购需求。"},
+      {num:"SP·02", title:"Key Function", text:"ANC 降噪深度 -35dB，蓝牙 5.3 连接稳定，延迟 ≤50ms，单次续航 10h+总计 60h。"},
+      {num:"SP·03", title:"Material & Spec", text:"IPX5 防汗防雨，硅胶耳塞三档尺寸，支持 Type-C 快充，15 分钟充电 2 小时续航。"},
+      {num:"SP·04", title:"Target Scene", text:"适配通勤、健身、在家办公等多场景，兼容 iOS/Android，买家接受度高。"},
+      {num:"SP·05", title:"B2B Service", text:"支持 CE/FCC/RoHS 认证，OEM 定制 Logo 与包装，MOQ 100 个起，15 天交货。"}
+    ],
+    sop:[
+      {cls:"s1", step:"STEP 01", title:"市场数据破冰", text:"展示 $56B 市场+8.9% 增速，ANC 与骨传导是两大蓝海，买卖差价高达 3 倍以上。"},
+      {cls:"s2", step:"STEP 02", title:"供应链消除顾虑", text:"深圳/东莞 4 家认证工厂，CE/FCC 齐全，支持 OEM 定制，7 天快速出样。"},
+      {cls:"s3", step:"STEP 03", title:"AI 视觉震撼提案", text:"展示 ANC/骨传导/游戏/豆式 4 款提案，精准命中亚马逊热销细分赛道。"},
+      {cls:"s4", step:"STEP 04", title:"发品包闭环成交", text:"5 条 SEO 标题已含 ANC/TWS/Gaming 核心词，开通即用，首批上架 1 小时完成。"}
+    ]
+  },
+
+  "户外帐篷": {
+    score:4.0, d1:4.5, d2:3.5, d3:4.5, d4:3.5,
+    mSize:"$4.2B", mCagr:"+7.1%", mPrice:"¥80–¥450", mRetail:"$45–$299",
+    blueOcean:["免搭建秒开","超轻700g","防水3000mm","四季通用","露营家庭款"],
+    factories:[
+      {badge:"A", name:"浙江某户外装备集团", tags:["15年出口","BSCI认证"], price:"¥120–¥380", moq:"50顶"},
+      {badge:"B", name:"宁波轻量化帐篷工厂", tags:["超轻专利","碳纤杆"],   price:"¥180–¥450", moq:"30顶"},
+      {badge:"C", name:"广州户外一件代发仓", tags:["现货充足","3天发货"],   price:"¥80–¥200",  moq:"1顶"},
+      {badge:"D", name:"义乌户外用品贸易商", tags:["多SKU","快速打样"],     price:"¥90–¥250",  moq:"20顶"}
+    ],
+    products:[
+      {img:null, label:"秒开免搭建款"},
+      {img:null, label:"超轻徒步款 700g"},
+      {img:null, label:"家庭 6 人大帐篷"},
+      {img:null, label:"四季防风防雪款"}
+    ],
+    titles:[
+      "Instant Pop Up Tent 2-Person Automatic Quick Setup Camping Tent Waterproof 3000mm UV Protection Outdoor",
+      "Ultralight Backpacking Tent 700g Single Person 4-Season Hiking Tent Carbon Fiber Poles Windproof OEM",
+      "Large Family Camping Tent 6-Person Cabin Tent Easy Setup with Divider Waterproof Outdoor Glamping Tent",
+      "Wholesale All-Season Dome Tent Windproof Snow Load Resistance Camping Tent with Vestibule Custom Logo",
+      "Factory Price Beach Sun Shelter Pop Up Tent UV50+ Anti-Wind Stakes Included OEM ODM Custom Packaging"
+    ],
+    keywords:["Pop Up Tent","Ultralight Tent","Family Camping Tent","Waterproof Tent","Backpacking Tent OEM"],
+    sellingPoints:[
+      {num:"SP·01", title:"Core Value", text:"户外露营帐篷，覆盖秒开/超轻/家庭/四季多款型，适合 Amazon 多细分赛道布局。"},
+      {num:"SP·02", title:"Key Function", text:"防水指数 3000mm+，抗风速 8 级，秒开款 3 秒完成搭建，大幅提升买家评价。"},
+      {num:"SP·03", title:"Material & Spec", text:"210T 涤纶防水布，铝合金/碳纤维杆，重量 0.7–4.5kg，附收纳袋与地钉组。"},
+      {num:"SP·04", title:"Target Scene", text:"适用徒步、家庭野营、海滩、节日音乐节，全年适销，Q2–Q3 旺季爆发明显。"},
+      {num:"SP·05", title:"B2B Service", text:"支持 Logo 印刷与颜色定制，BSCI/CE 认证，MOQ 20 顶，20 天完成交货。"}
+    ],
+    sop:[
+      {cls:"s1", step:"STEP 01", title:"市场数据破冰", text:"展示 $4.2B 市场+7.1% 增速，户外露营后疫情时代持续爆发，欧美买家购买力强。"},
+      {cls:"s2", step:"STEP 02", title:"供应链消除顾虑", text:"浙江/宁波专业出口工厂 BSCI 认证，义乌现货仓可 3 天发货，测款零风险。"},
+      {cls:"s3", step:"STEP 03", title:"AI 视觉震撼提案", text:"秒开/超轻/家庭/四季 4 款提案，精准覆盖亚马逊 Top 搜索词对应的细分场景。"},
+      {cls:"s4", step:"STEP 04", title:"发品包闭环成交", text:"5 条 SEO 标题含 Pop Up/Ultralight/Waterproof 高权重词，即刻可发布上架。"}
+    ]
+  },
+
+  "宠物玩具": {
+    score:4.4, d1:4.5, d2:4.0, d3:4.5, d4:4.5,
+    mSize:"$8.1B", mCagr:"+10.3%", mPrice:"¥5–¥45", mRetail:"$8–$39",
+    blueOcean:["互动益智漏食球","猫薄荷系列","电动逗猫棒","耐咬磨牙玩具","宠物减压解闷"],
+    factories:[
+      {badge:"A", name:"广东宠物用品集团", tags:["ASTM认证","出口10年"], price:"¥8–¥35",  moq:"500件"},
+      {badge:"B", name:"义乌宠物玩具工厂", tags:["款式多样","快速打样"], price:"¥5–¥25",  moq:"200件"},
+      {badge:"C", name:"深圳电动宠物玩具厂", tags:["电动专精","USB充电"], price:"¥18–¥45", moq:"100件"},
+      {badge:"D", name:"宁波天然材料宠物厂", tags:["西剑麻/棉绳","环保"], price:"¥6–¥30",  moq:"300件"}
+    ],
+    products:[
+      {img:null, label:"互动益智漏食球"},
+      {img:null, label:"电动自动逗猫棒"},
+      {img:null, label:"耐咬磨牙发声玩具"},
+      {img:null, label:"猫薄荷羽毛逗猫玩具"}
+    ],
+    titles:[
+      "Interactive Dog Treat Dispensing Ball Puzzle Toy Slow Feeder IQ Training Rubber Chew Toy for Large Dogs",
+      "Automatic Electric Cat Toy Rotating Feather Wand USB Rechargeable Interactive Kitten Teaser Stick",
+      "Indestructible Dog Chew Toy Natural Rubber Durable Squeaky Bite Resistant Puppy Teething Molar Toy OEM",
+      "Catnip Cat Toy Set Plush Mouse Crinkle Ball Feather Teaser Wand Refillable Catnip Interactive Bundle",
+      "Wholesale Pet Toys Bulk Assorted Dog Cat Interactive Toys Cotton Rope Chew Squeaky Custom Logo ODM"
+    ],
+    keywords:["Dog Chew Toy","Interactive Cat Toy","Treat Dispensing Ball","Catnip Toy","Pet Toy OEM"],
+    sellingPoints:[
+      {num:"SP·01", title:"Core Value", text:"宠物互动益智玩具系列，覆盖犬猫两大品类，适合 Amazon/Chewy 多平台布局。"},
+      {num:"SP·02", title:"Key Function", text:"天然橡胶耐咬设计，通过 ASTM 无毒认证，漏食慢喂可延长饱腹感，减少焦虑。"},
+      {num:"SP·03", title:"Material & Spec", text:"食品级 TPR/天然橡胶，尺寸 S/M/L 三档，适配 2–50kg 犬猫，含安全吞咽说明。"},
+      {num:"SP·04", title:"Target Scene", text:"适用独居宠物主日常陪伴、训练奖励、节日礼盒套装，复购率行业最高。"},
+      {num:"SP·05", title:"B2B Service", text:"支持 OEM 定制图案与颜色，ASTM/EN71/CPSIA 认证，MOQ 100 件，12 天交货。"}
+    ],
+    sop:[
+      {cls:"s1", step:"STEP 01", title:"市场数据破冰", text:"展示 $8.1B 市场+10.3% 爆发增速，宠物经济是近 5 年最稳定的跨境蓝海赛道。"},
+      {cls:"s2", step:"STEP 02", title:"供应链消除顾虑", text:"广东/义乌专业宠物厂 ASTM 认证，电动款深圳 USB 充电专厂，快速出样 5 天。"},
+      {cls:"s3", step:"STEP 03", title:"AI 视觉震撼提案", text:"漏食球/电动逗猫/磨牙/薄荷 4 款提案，精准对应 Amazon 宠物玩具热销 Top 10。"},
+      {cls:"s4", step:"STEP 04", title:"发品包闭环成交", text:"5 条含 Interactive/Chew/Catnip 高权重词标题已就绪，开通当天即可发布上架。"}
+    ]
+  }
+};
+
+// ── FUZZY MATCH HELPER ───────────────────────────────────────────────────────
+function findProduct(input) {
+  const s = input.trim();
+  // 1) exact match
+  if (DB[s]) return { key: s, data: DB[s] };
+  // 2) partial match
+  for (const key of Object.keys(DB)) {
+    if (s.includes(key) || key.includes(s)) return { key, data: DB[key] };
+  }
+  return null;
+}
+
+// ── RENDER HELPERS ───────────────────────────────────────────────────────────
+function renderFactories(factories) {
+  return factories.map(f => `
+    <div class="factory-item">
+      <div class="factory-badge ${f.badge}">${f.badge}</div>
+      <div>
+        <div class="factory-name">${f.name}</div>
+        <div class="factory-tags">${f.tags.map(t=>`<span>${t}</span>`).join('')}</div>
+      </div>
+      <div class="factory-price">
+        <div class="p">${f.price}</div>
+        <div class="m">MOQ ${f.moq}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderProducts(products) {
+  return products.map(p => `
+    <div class="product-img-wrap">
+      ${p.img
+        ? `<img src="${p.img}" alt="${p.label}" loading="lazy">`
+        : `<div class="img-placeholder">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            AI 设计稿生成中
+           </div>`}
+      <div class="product-img-label">${p.label}</div>
+    </div>`).join('');
+}
+
+function renderTitles(titles) {
+  return titles.map((t, i) => `
+    <div class="title-item">
+      <span class="title-num">T${i+1}</span>
+      <span class="title-text">${t}</span>
+    </div>`).join('');
+}
+
+function renderSP(sp) {
+  return sp.map(s => `
+    <div class="sp-item">
+      <div class="sp-num">${s.num}</div>
+      <div class="sp-title">${s.title}</div>
+      <div class="sp-text">${s.text}</div>
+    </div>`).join('');
+}
+
+function renderSOP(steps, productName) {
+  return steps.map(s => `
+    <div class="sop-step ${s.cls}">
+      <div class="sop-step-num">${s.step}</div>
+      <h4>${s.title}</h4>
+      <p>${s.text}</p>
+    </div>`).join('');
+}
+
+function setBar(idv, idb, val, color) {
+  document.getElementById(idv).textContent = val.toFixed(1);
+  const el = document.getElementById(idb);
+  el.style.width = (val / 5 * 100) + '%';
+  if (color) el.style.background = color;
+}
+
+// ── LOADING ANIMATION ────────────────────────────────────────────────────────
+function animateLoading(productName, cb) {
+  const steps = ['ls1','ls2','ls3','ls4'];
+  let i = 0;
+  steps.forEach(id => {
+    document.getElementById(id).className = '';
+  });
+  document.getElementById('loadingTitle').textContent = `AI 正在为「${productName}」生成专属方案…`;
+  const iv = setInterval(() => {
+    if (i > 0) document.getElementById(steps[i-1]).className = 'done';
+    if (i < steps.length) { document.getElementById(steps[i]).className = 'active'; i++; }
+    else { clearInterval(iv); setTimeout(cb, 400); }
+  }, 500);
+}
+
+// ── GENERATE ─────────────────────────────────────────────────────────────────
+function doGenerate() {
+  const raw = document.getElementById('productInput').value.trim();
+  if (!raw) { document.getElementById('productInput').focus(); return; }
+
+  // hide everything, show loading
+  document.getElementById('placeholder').classList.add('hidden');
+  document.getElementById('resultArea').classList.add('hidden');
+  document.getElementById('loadingWrap').classList.remove('hidden');
+
+  animateLoading(raw, () => {
+    document.getElementById('loadingWrap').classList.add('hidden');
+
+    const match = findProduct(raw);
+    if (!match) {
+      // Unknown product → build generic data on the fly
+      renderGeneric(raw);
+      return;
+    }
+    renderData(match.key, match.data);
+  });
+}
+
+// ── RENDER WITH REAL DATA ────────────────────────────────────────────────────
+function renderData(key, d) {
+  const now = new Date();
+  const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  document.getElementById('rProductName').textContent = key;
+  document.getElementById('rTime').textContent = timeStr;
+  document.getElementById('rScoreBadge').textContent = `综合机会评分 ★ ${d.score.toFixed(1)}`;
+  document.getElementById('mScore').textContent = `机会评分 ${d.score.toFixed(1)}`;
+  document.getElementById('mSize').textContent = d.mSize;
+  document.getElementById('mCagr').textContent = d.mCagr;
+  document.getElementById('mPrice').textContent = d.mPrice;
+  document.getElementById('mRetail').textContent = d.mRetail;
+  document.getElementById('mBlueOcean').innerHTML = d.blueOcean.map(b=>`<span>${b}</span>`).join('');
+  setBar('d1v','d1b', d.d1, '#0055C8');
+  setBar('d2v','d2b', d.d2, '#FF6B2B');
+  setBar('d3v','d3b', d.d3, '#00A86B');
+  setBar('d4v','d4b', d.d4, '#7C3AED');
+  document.getElementById('sFactoryCount').textContent = `匹配 ${d.factories.length} 家工厂`;
+  document.getElementById('factoryList').innerHTML = renderFactories(d.factories);
+  document.getElementById('productGrid').innerHTML = renderProducts(d.products);
+  document.getElementById('titleList').innerHTML = renderTitles(d.titles);
+  document.getElementById('kwTags').innerHTML = d.keywords.map(k=>`<span>${k}</span>`).join('');
+  document.getElementById('spGrid').innerHTML = renderSP(d.sellingPoints);
+  document.getElementById('sopTitle').textContent = `${key} · 四阶段谈单话术`;
+  document.getElementById('sopSteps').innerHTML = renderSOP(d.sop, key);
+
+  document.getElementById('resultArea').classList.remove('hidden');
+  window.scrollTo({ top: 220, behavior: 'smooth' });
+}
+
+// ── GENERIC FALLBACK ─────────────────────────────────────────────────────────
+function renderGeneric(productName) {
+  const genericData = {
+    score:3.9, d1:4.0, d2:3.5, d3:4.0, d4:4.0,
+    mSize:"待确认", mCagr:"+5–10%", mPrice:"¥待调研", mRetail:"$待调研",
+    blueOcean:["定制化","环保材质","多功能","低MOQ","快速交货"],
+    factories:[
+      {badge:"A", name:`${productName} 专业生产厂 A`, tags:["源头工厂","出口经验"], price:"询价", moq:"100件"},
+      {badge:"B", name:`${productName} 跨境贸易商 B`, tags:["现货充足","快速打样"], price:"询价", moq:"50件"},
+      {badge:"C", name:`${productName} 柔性快反厂 C`, tags:["OEM/ODM","7天出样"], price:"询价", moq:"200件"},
+      {badge:"D", name:`${productName} 认证专厂 D`, tags:["CE/FCC认证","质量稳定"], price:"询价", moq:"100件"}
+    ],
+    products:[
+      {img:null, label:`${productName} 基础款`},
+      {img:null, label:`${productName} 升级款`},
+      {img:null, label:`${productName} 定制款`},
+      {img:null, label:`${productName} 礼盒款`}
+    ],
+    titles:[
+      `Wholesale ${productName} High Quality OEM Custom Logo Factory Direct Supply B2B`,
+      `2025 New Arrival ${productName} Customized ODM Low MOQ Fast Shipping`,
+      `Factory Price ${productName} Bulk Order Wholesale with Custom Packaging`,
+      `Premium ${productName} OEM Manufacturer Quality Guaranteed Export`,
+      `Custom ${productName} B2B Wholesale Supplier Low Price Fast Delivery`
+    ],
+    keywords:[productName, `${productName} OEM`, `Wholesale ${productName}`, `Custom ${productName}`, `${productName} Factory`],
+    sellingPoints:[
+      {num:"SP·01", title:"Core Value", text:`${productName}，覆盖多应用场景，支持 OEM/ODM 定制，面向全球 B2B 买家。`},
+      {num:"SP·02", title:"Key Function", text:"核心功能卓越，满足买家实际使用需求，品质稳定，复购率高。"},
+      {num:"SP·03", title:"Material & Spec", text:"优质材料制造，规格可定制，附详细参数说明与国际认证文件。"},
+      {num:"SP·04", title:"Target Scene", text:"适用多种场景，买家受众广泛，全年适销，节日季爆发明显。"},
+      {num:"SP·05", title:"B2B Service", text:"支持定制 Logo 与包装，提供认证文件，低 MOQ，15 天交货。"}
+    ],
+    sop:[
+      {cls:"s1", step:"STEP 01", title:"市场数据破冰", text:`展示${productName}全球市场规模与增速，点出批零差价利润空间，建立客户信心。`},
+      {cls:"s2", step:"STEP 02", title:"供应链消除顾虑", text:"展示精准匹配的 4 家工厂，解决客户"有单没货""货不对板"的核心顾虑。"},
+      {cls:"s3", step:"STEP 03", title:"AI 视觉震撼提案", text:`展示 4 款${productName}专属设计稿，视觉差异化打击同赛道普通卖家。`},
+      {cls:"s4", step:"STEP 04", title:"发品包闭环成交", text:"SEO 标题+黄金卖点已就绪，开通即用，首批上架当天完成，快速启动出单。"}
+    ]
+  };
+  renderData(productName, genericData);
+}
+</script>
+</body>
+</html>
