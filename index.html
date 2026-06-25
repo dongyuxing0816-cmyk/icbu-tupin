@@ -44,7 +44,7 @@ body { font-family:'PingFang SC','Segoe UI',sans-serif; background:var(--gray-50
 
 /* ── PLACEHOLDER & LOADING ── */
 .placeholder, .loading-wrap {
-  text-align:center; padding:80px 20px; color:var(--gray-400);
+  display:block; text-align:center; padding:80px 20px; color:var(--gray-400);
 }
 .placeholder svg, .loading-wrap svg { width:64px; height:64px; margin:0 auto 20px; display:block; }
 .placeholder p { font-size:17px; }
@@ -579,15 +579,23 @@ function setBar(idv, idb, val, color) {
 // ── LOADING ANIMATION ────────────────────────────────────────────────────────
 function animateLoading(productName, cb) {
   const steps = ['ls1','ls2','ls3','ls4'];
-  let i = 0;
-  steps.forEach(id => {
-    document.getElementById(id).className = '';
-  });
+  // 重置所有步骤状态
+  steps.forEach(id => { document.getElementById(id).className = ''; });
   document.getElementById('loadingTitle').textContent = `AI 正在为「${productName}」生成专属方案…`;
+  let i = 0;
   const iv = setInterval(() => {
-    if (i > 0) document.getElementById(steps[i-1]).className = 'done';
-    if (i < steps.length) { document.getElementById(steps[i]).className = 'active'; i++; }
-    else { clearInterval(iv); setTimeout(cb, 400); }
+    if (i < steps.length) {
+      // 把前一步标为 done
+      if (i > 0) document.getElementById(steps[i - 1]).className = 'done';
+      // 当前步标为 active
+      document.getElementById(steps[i]).className = 'active';
+      i++;
+    } else {
+      // 把最后一步也标为 done
+      document.getElementById(steps[steps.length - 1]).className = 'done';
+      clearInterval(iv);
+      setTimeout(cb, 400);
+    }
   }, 500);
 }
 
